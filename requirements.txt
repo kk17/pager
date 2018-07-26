@@ -4,3 +4,4 @@ coverage
 pypi-publisher
 beautifulsoup4
 html5lib
+click
