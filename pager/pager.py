@@ -6,7 +6,7 @@ import click
 import sys
 import re
 
-_index_selector_m = re.compile('^\[(\d+)\]$')
+_index_selector_m = re.compile('^\[(-{0,1}\d+){0,1}:{0,1}(-{0,1}\d+){0,1}\]$')
 _attribute_selector_m = re.compile('^\[([^0-9].+)\]$')
 _group_separator_m = re.compile('^and$', re.IGNORECASE)
 _html_tag_m = re.compile('^\s*</{0,1}(\w+)')
@@ -15,7 +15,16 @@ _html_tag_m = re.compile('^\s*</{0,1}(\w+)')
 def select_elements(parents, selector):
     m = _index_selector_m.match(selector)
     if m:
-        return [parents[int(m.group(1))]]
+        if m.group(1):
+            start_index = int(m.group(1))
+        else:
+            start_index = 0
+
+        if m.group(2):
+            end_index = int(m.group(2))
+        else:
+            end_index = start_index + 1
+        return parents[start_index: end_index]
 
     elements = []
     m = _attribute_selector_m.match(selector)
