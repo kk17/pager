@@ -5,11 +5,14 @@ import requests
 import click
 import sys
 import re
+import html2text
 
 _index_selector_m = re.compile('^\[(-{0,1}\d+){0,1}:{0,1}(-{0,1}\d+){0,1}\]$')
 _attribute_selector_m = re.compile('^\[([^0-9].+)\]$')
 _group_separator_m = re.compile('^and$', re.IGNORECASE)
 _html_tag_m = re.compile('^\s*</{0,1}(\w+)')
+
+_html2text = html2text.HTML2Text(bodywidth=0)
 
 
 def select_elements(parents, selector):
@@ -38,28 +41,44 @@ def select_elements(parents, selector):
     return elements
 
 
-def prettify(element):
+def prettify_text(element):
     if isinstance(element, Tag):
-        html_text = element.prettify()
-        not_tag_lines = []
-        for line in html_text.splitlines():
-            if not _html_tag_m.match(line):
-                not_tag_lines.append(line)
-        return '\n'.join(not_tag_lines)
+        return _html2text.handle(element.prettify())
     else:
         return element
+
+
+def prettify_html(element):
+    if isinstance(element, Tag):
+        return element.prettify()
+    else:
+        return element
+
+
+def print_element(element, format):
+    if format == "markdown-text":
+        click.echo(prettify_text(element))
+    elif format == "pretty-html":
+        click.echo(prettify_html(element))
+    else:
+        # html
+        click.echo(str(element))
 
 
 @click.command()
 @click.option('--pipe', '-P', default=False, is_flag=True, help='pipe mode')
 @click.option('--encoding', '-e', default='utf-8', help='page encoding')
-@click.option('--blanks', '-b', default=0, type=int, help='separate blank line num')
-@click.option('--raw', default=False, is_flag=True, help='return raw html')
+@click.option('--separator', '-s', default=None, type=str, help='separator between multi elements, default to empty')
+@click.option(
+    '--format', '-F',
+    default="markdown-text",
+    help='print format, available formats are: `markdown-text`, `html`, `pretty-html`, default to `markdown-text`'
+)
 @click.argument('url')
 @click.argument('selectors', nargs=-1)
-def parse_page(pipe, raw, encoding, blanks, url, selectors):
+def parse_page(pipe, format, encoding, separator, url, selectors):
     if pipe:
-        content = "\n".join(sys.stdin.readlines())
+        content = sys.stdin.read()
         selectors = [url] + list(selectors)
     elif url.startswith('http://') or url.startswith('https://'):
         r = requests.get(url)
@@ -68,6 +87,11 @@ def parse_page(pipe, raw, encoding, blanks, url, selectors):
     else:
         with open(url, 'r', encoding) as f:
             content = f.read()
+
+    soup = BeautifulSoup(content, 'html5lib')
+
+    if len(selectors) == 0:
+        print_element(soup, format)
 
     selectors_groups = []
     current_group = []
@@ -79,20 +103,19 @@ def parse_page(pipe, raw, encoding, blanks, url, selectors):
             current_group.append(selector)
     selectors_groups.append(current_group)
 
-    soup = BeautifulSoup(content, 'html5lib')
-
+    has_content_before = False
+    if separator:
+        separator = separator.replace('\\n', '\n')
     for selectors_group in selectors_groups:
         elements = [soup]
         for selector in selectors_group:
             elements = select_elements(elements, selector)
 
         for e in elements:
-            if not raw:
-                click.echo(prettify(e))
-            else:
-                click.echo(str(e))
-            if blanks > 0:
-                click.echo('\n' * (blanks - 1))
+            if has_content_before and separator:
+                click.echo(separator)
+            print_element(e, format)
+            has_content_before = True
 
 
 if __name__ == '__main__':
