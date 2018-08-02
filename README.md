@@ -25,15 +25,16 @@ Or clone the repo:
 Usage
 -------
 
-    $ pager --help
-    Usage: pager [OPTIONS] URL [SELECTORS]...
+    $ Usage: pager [OPTIONS] URL [SELECTORS]...
 
     Options:
       -P, --pipe            pipe mode
       -e, --encoding TEXT   page encoding
+      --ignore-links        ignore html links in markdown format
       -s, --separator TEXT  separator between multi elements, default to empty
       -F, --format TEXT     print format, available formats are: `markdown-text`,
-                            `html`, `pretty-html`, default to `markdown-text`
+                            `html`, `text`, pretty-html`, default to `markdown-
+                            text`
       --help                Show this message and exit.
 
 Example

@@ -48,6 +48,13 @@ def prettify_text(element):
         return element
 
 
+def text(element):
+    if isinstance(element, Tag):
+        return element.text
+    else:
+        return element
+
+
 def prettify_html(element):
     if isinstance(element, Tag):
         return element.prettify()
@@ -60,6 +67,8 @@ def print_element(element, format):
         click.echo(prettify_text(element))
     elif format == "pretty-html":
         click.echo(prettify_html(element))
+    elif format == "text":
+        click.echo(text(element))
     else:
         # html
         click.echo(str(element))
@@ -68,15 +77,17 @@ def print_element(element, format):
 @click.command()
 @click.option('--pipe', '-P', default=False, is_flag=True, help='pipe mode')
 @click.option('--encoding', '-e', default='utf-8', help='page encoding')
+@click.option('--ignore-links', default=False, is_flag=True, help='ignore html links in markdown format')
 @click.option('--separator', '-s', default=None, type=str, help='separator between multi elements, default to empty')
 @click.option(
     '--format', '-F',
     default="markdown-text",
-    help='print format, available formats are: `markdown-text`, `html`, `pretty-html`, default to `markdown-text`'
+    help='print format, available formats are: `markdown-text`, `html`, `text`, pretty-html`, default to `markdown-text`'
 )
 @click.argument('url')
 @click.argument('selectors', nargs=-1)
-def parse_page(pipe, format, encoding, separator, url, selectors):
+def parse_page(pipe, ignore_links, format, encoding, separator, url, selectors):
+    _html2text.ignore_links = ignore_links
     if pipe:
         content = sys.stdin.read()
         selectors = [url] + list(selectors)
